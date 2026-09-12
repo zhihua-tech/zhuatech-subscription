@@ -1,0 +1,93 @@
+[
+  {
+    "op": "create",
+    "as": "plan",
+    "module": "plans",
+    "data": {
+      "name": "协作标准版",
+      "planCode": "TEAM-STANDARD",
+      "monthlyFee": 20,
+      "includedUnits": 100,
+      "overagePrice": 0.5
+    }
+  },
+  {
+    "op": "create",
+    "as": "sub",
+    "module": "subscriptions",
+    "data": {
+      "customer": "示例企业客户",
+      "plan": "$plan.id",
+      "seats": 2,
+      "startsAt": "$today-10"
+    }
+  },
+  {
+    "op": "action",
+    "target": "sub",
+    "action": "activate",
+    "role": "reviewer"
+  },
+  {
+    "op": "create",
+    "as": "usage",
+    "module": "usage",
+    "data": {
+      "subscription": "$sub.id",
+      "eventId": "EVT-001",
+      "occurredAt": "$today-2",
+      "units": 250
+    }
+  },
+  {
+    "op": "action",
+    "target": "sub",
+    "action": "bill",
+    "role": "admin",
+    "data": {
+      "periodStart": "$today-5",
+      "periodEnd": "$today"
+    }
+  },
+  {
+    "op": "find",
+    "as": "invoice",
+    "module": "invoices",
+    "where": {
+      "data.subscription": "$sub.id"
+    }
+  },
+  {
+    "op": "action",
+    "target": "invoice",
+    "action": "pay",
+    "role": "reviewer",
+    "data": {
+      "paymentRef": "PAY-2026-001"
+    }
+  },
+  {
+    "op": "action",
+    "target": "sub",
+    "action": "suspend",
+    "role": "admin",
+    "data": {
+      "reason": "合同暂缓"
+    }
+  },
+  {
+    "op": "action",
+    "target": "sub",
+    "action": "resume",
+    "role": "admin"
+  },
+  {
+    "op": "action",
+    "target": "sub",
+    "action": "cancel",
+    "role": "admin",
+    "data": {
+      "reason": "客户不续订"
+    }
+  }
+]
