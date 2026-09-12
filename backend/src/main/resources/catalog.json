@@ -1,0 +1,376 @@
+{
+  "slug": "subscription",
+  "name": "知华订阅计费",
+  "subtitle": "套餐管理、订阅生命周期、用量计量与账单结算",
+  "accent": "#56667e",
+  "modules": [
+    {
+      "key": "plans",
+      "label": "订阅套餐",
+      "description": "席位费、包含额度与超额单价",
+      "initial": "ACTIVE",
+      "editable": true,
+      "creatable": true,
+      "fields": [
+        {
+          "key": "name",
+          "label": "套餐名称",
+          "type": "text",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "planCode",
+          "label": "套餐编码",
+          "type": "text",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "monthlyFee",
+          "label": "席位月费",
+          "type": "money",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": "0",
+          "max": "1000000"
+        },
+        {
+          "key": "includedUnits",
+          "label": "每席位包含用量",
+          "type": "integer",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": "0",
+          "max": "10000000"
+        },
+        {
+          "key": "overagePrice",
+          "label": "超额单价",
+          "type": "money",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": "0",
+          "max": "100000"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "key": "subscriptions",
+      "label": "客户订阅",
+      "description": "开通、暂停、恢复、取消与周期出账",
+      "initial": "DRAFT",
+      "editable": true,
+      "creatable": true,
+      "fields": [
+        {
+          "key": "customer",
+          "label": "客户名称",
+          "type": "text",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "plan",
+          "label": "订阅套餐",
+          "type": "ref",
+          "required": true,
+          "ref": "plans",
+          "options": [],
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "seats",
+          "label": "席位数",
+          "type": "integer",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": "1",
+          "max": "100000"
+        },
+        {
+          "key": "startsAt",
+          "label": "起始日期",
+          "type": "date",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": null,
+          "max": null
+        }
+      ],
+      "actions": [
+        {
+          "key": "activate",
+          "label": "审批开通",
+          "from": [
+            "DRAFT"
+          ],
+          "to": "ACTIVE",
+          "role": "REVIEWER",
+          "separate": true,
+          "fields": []
+        },
+        {
+          "key": "suspend",
+          "label": "暂停订阅",
+          "from": [
+            "ACTIVE"
+          ],
+          "to": "SUSPENDED",
+          "role": "ADMIN",
+          "separate": true,
+          "fields": [
+            {
+              "key": "reason",
+              "label": "暂停原因",
+              "type": "text",
+              "required": true,
+              "ref": null,
+              "options": [],
+              "min": null,
+              "max": null
+            }
+          ]
+        },
+        {
+          "key": "resume",
+          "label": "恢复订阅",
+          "from": [
+            "SUSPENDED"
+          ],
+          "to": "ACTIVE",
+          "role": "ADMIN",
+          "separate": true,
+          "fields": []
+        },
+        {
+          "key": "cancel",
+          "label": "取消订阅",
+          "from": [
+            "ACTIVE",
+            "SUSPENDED"
+          ],
+          "to": "CANCELLED",
+          "role": "ADMIN",
+          "separate": true,
+          "fields": [
+            {
+              "key": "reason",
+              "label": "取消原因",
+              "type": "text",
+              "required": true,
+              "ref": null,
+              "options": [],
+              "min": null,
+              "max": null
+            }
+          ]
+        },
+        {
+          "key": "bill",
+          "label": "生成周期账单",
+          "from": [
+            "ACTIVE"
+          ],
+          "to": "ACTIVE",
+          "role": "ADMIN",
+          "separate": true,
+          "fields": [
+            {
+              "key": "periodStart",
+              "label": "账期开始",
+              "type": "date",
+              "required": true,
+              "ref": null,
+              "options": [],
+              "min": null,
+              "max": null
+            },
+            {
+              "key": "periodEnd",
+              "label": "账期结束",
+              "type": "date",
+              "required": true,
+              "ref": null,
+              "options": [],
+              "min": null,
+              "max": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "usage",
+      "label": "用量事件",
+      "description": "幂等用量事件、订阅关联和账期归集",
+      "initial": "RECORDED",
+      "editable": false,
+      "creatable": true,
+      "fields": [
+        {
+          "key": "subscription",
+          "label": "订阅",
+          "type": "ref",
+          "required": true,
+          "ref": "subscriptions",
+          "options": [],
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "eventId",
+          "label": "业务事件 ID",
+          "type": "text",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "occurredAt",
+          "label": "发生日期",
+          "type": "date",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "units",
+          "label": "消耗单位",
+          "type": "integer",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": "1",
+          "max": "10000000"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "key": "invoices",
+      "label": "订阅账单",
+      "description": "周期费用、超额费用与收款核销",
+      "initial": "ISSUED",
+      "editable": false,
+      "creatable": false,
+      "fields": [
+        {
+          "key": "subscription",
+          "label": "订阅",
+          "type": "ref",
+          "required": true,
+          "ref": "subscriptions",
+          "options": [],
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "periodStart",
+          "label": "账期开始",
+          "type": "date",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "periodEnd",
+          "label": "账期结束",
+          "type": "date",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "amount",
+          "label": "应收金额",
+          "type": "money",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": null,
+          "max": null
+        }
+      ],
+      "actions": [
+        {
+          "key": "pay",
+          "label": "登记收款",
+          "from": [
+            "ISSUED"
+          ],
+          "to": "PAID",
+          "role": "REVIEWER",
+          "separate": true,
+          "fields": [
+            {
+              "key": "paymentRef",
+              "label": "收款流水号",
+              "type": "text",
+              "required": true,
+              "ref": null,
+              "options": [],
+              "min": null,
+              "max": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "payments",
+      "label": "收款流水",
+      "description": "支付参考号和金额的不可修改流水",
+      "initial": "POSTED",
+      "editable": false,
+      "creatable": false,
+      "fields": [
+        {
+          "key": "invoice",
+          "label": "账单",
+          "type": "ref",
+          "required": true,
+          "ref": "invoices",
+          "options": [],
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "paymentRef",
+          "label": "收款流水号",
+          "type": "text",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": null,
+          "max": null
+        }
+      ],
+      "actions": []
+    }
+  ]
+}
