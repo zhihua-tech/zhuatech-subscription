@@ -13,6 +13,7 @@ import static cn.zhuatech.subscription.Model.*;
  final JdbcTemplate db;final ObjectMapper json;final Catalog catalog;final Domain domain;
  public Engine(JdbcTemplate db,ObjectMapper json,Catalog catalog,Domain domain){this.db=db;this.json=json;this.catalog=catalog;this.domain=domain;}
  public JdbcTemplate jdbc(){return db;} public ObjectMapper mapper(){return json;} public Spec spec(){return catalog.spec;}
+ public Map<String,Object> previewBill(User u,String id,LocalDate start,LocalDate end){return domain.previewBill(this,u,get(u,id),start,end);}
  String encode(Object value){return json.writeValueAsString(value);}
  @SuppressWarnings("unchecked") Map<String,Object> decode(String value){return new LinkedHashMap<>(json.readValue(value,Map.class));}
  public Row row(java.sql.ResultSet r)throws java.sql.SQLException{return new Row(r.getString("id"),r.getString("tenant"),r.getString("module"),r.getString("code"),r.getString("state"),r.getInt("version"),r.getString("creator"),decode(r.getString("payload")),r.getTimestamp("created_at").toInstant().toString(),r.getTimestamp("updated_at").toInstant().toString());}

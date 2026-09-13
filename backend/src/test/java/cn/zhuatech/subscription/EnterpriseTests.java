@@ -70,6 +70,14 @@ class EnterpriseTests {
   if(op.equals("metric")){
    var metrics=(Map<String,Object>)call("GET","/dashboard",null,role).body().get("metrics");((Map<String,Object>)step.get("expect")).forEach((k,v)->compare(v,metrics.get(k),k));return;
   }
+  if(op.equals("bill-preview")){
+   String id=ids.get(step.get("target").toString());long invoices=db.queryForObject("SELECT COUNT(*) FROM business_record WHERE module='invoices'",Long.class),audit=db.queryForObject("SELECT COUNT(*) FROM audit_event",Long.class);
+   String path="/subscriptions/"+id+"/bill-preview?periodStart="+data.get("periodStart")+"&periodEnd="+data.get("periodEnd");Result result=call("GET",path,null,role);
+   assertEquals(((Number)step.getOrDefault("error",200)).intValue(),result.status(),step+" -> "+result.body());
+   if(step.containsKey("expect"))((Map<String,Object>)resolve(step.get("expect"))).forEach((k,v)->compare(v,at(result.body(),k),k));
+   assertEquals(invoices,db.queryForObject("SELECT COUNT(*) FROM business_record WHERE module='invoices'",Long.class),"试算不得生成账单");
+   assertEquals(audit,db.queryForObject("SELECT COUNT(*) FROM audit_event",Long.class),"试算不得写审计流水");return;
+  }
   int expected=((Number)step.getOrDefault("error",200)).intValue();Result result;long records=db.queryForObject("SELECT COUNT(*) FROM business_record",Long.class),audit=db.queryForObject("SELECT COUNT(*) FROM audit_event",Long.class);
   if(op.equals("create")){
    String alias=step.get("as").toString();result=call("POST","/records/"+step.get("module"),Map.of("code","TEST-"+alias.toUpperCase(Locale.ROOT),"data",data),role);
