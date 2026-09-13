@@ -52,6 +52,22 @@
     "error": 409
   },
   {
+    "op": "bill-preview",
+    "target": "sub",
+    "role": "viewer",
+    "data": {
+      "periodStart": "$today-5",
+      "periodEnd": "$today"
+    },
+    "expect": {
+      "amount": 65,
+      "baseFee": 40,
+      "usedUnits": 250,
+      "includedUnits": 200,
+      "overageUnits": 50
+    }
+  },
+  {
     "op": "action",
     "target": "sub",
     "action": "bill",
@@ -77,6 +93,15 @@
       "data.amount": 65,
       "data.overageUnits": 50
     }
+  },
+  {
+    "op": "bill-preview",
+    "target": "sub",
+    "data": {
+      "periodStart": "$today-5",
+      "periodEnd": "$today"
+    },
+    "error": 409
   },
   {
     "op": "action",

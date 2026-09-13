@@ -7,10 +7,11 @@ const token=ref(sessionStorage.getItem('subscription-session')||''),user=ref(nul
 const username=ref(''),password=ref(''),busy=ref(false),error=ref(''),notice=ref('');
 const mode=ref(location.pathname.startsWith('/admin')?'admin':'work'),section=ref('dashboard'),rows=ref([]),total=ref(0),page=ref(1),query=ref(''),state=ref('');
 const selected=ref(null),history=ref([]),attachments=ref([]),dialog=ref(null),options=ref({}),users=ref([]),audit=ref([]);
+const previewSubscriptions=ref([]),previewSubscription=ref(''),previewStart=ref(''),previewEnd=ref(''),previewResult=ref(null);
 const module=computed(()=>catalog.value?.modules.find(m=>m.key===section.value));
 const roleNames={ADMIN:'系统管理员',REVIEWER:'审核人员',OPERATOR:'业务人员',VIEWER:'只读用户'};
-const currentTitle=computed(()=>section.value==='dashboard'?'业务概览':section.value==='users'?'账号与权限':section.value==='audit'?'操作审计':module.value?.label||'工作台');
-const currentDescription=computed(()=>module.value?.description||(section.value==='dashboard'?subtitle:section.value==='users'?'最小权限分配 · 账号停用或改密后，旧会话立即失效':'查看业务变更、审批以及账号管理的操作记录'));
+const currentTitle=computed(()=>section.value==='dashboard'?'业务概览':section.value==='billing-preview'?'账单试算':section.value==='users'?'账号与权限':section.value==='audit'?'操作审计':module.value?.label||'工作台');
+const currentDescription=computed(()=>section.value==='billing-preview'?'出账前核对账期、基础费和用量；试算不生成正式账单':module.value?.description||(section.value==='dashboard'?subtitle:section.value==='users'?'最小权限分配 · 账号停用或改密后，旧会话立即失效':'查看业务变更、审批以及账号管理的操作记录'));
 const columns=computed(()=>module.value?.fields.slice(0,4)||[]);
 const states=computed(()=>[...new Set([module.value?.initial,...(module.value?.actions||[]).flatMap(a=>[...a.from,a.to])])].filter(Boolean));
 function message(text){notice.value=text;setTimeout(()=>{notice.value='';},4500);}
@@ -26,11 +27,13 @@ async function logout(){await guarded(async()=>{await request('/auth/logout',{me
 async function load(){user.value=await request('/me');catalog.value=await request('/catalog');if(mode.value==='admin'&&user.value.role!=='ADMIN')mode.value='work';section.value=mode.value==='admin'?'users':'dashboard';await refresh();}
 async function refresh(){
  if(section.value==='dashboard'){dashboard.value=await request('/dashboard');return;}
+ if(section.value==='billing-preview'){const result=await request('/records?module=subscriptions&state=ACTIVE&size=100');previewSubscriptions.value=result.items;if(!result.items.some(row=>row.id===previewSubscription.value))previewSubscription.value=result.items[0]?.id||'';return;}
  if(section.value==='users'){users.value=await request('/admin/users');return;}
  if(section.value==='audit'){audit.value=await request('/admin/audit');return;}
  const r=await request('/records?'+new URLSearchParams({module:section.value,q:query.value,state:state.value,page:String(page.value),size:'20'}));rows.value=r.items;total.value=r.total;for(const field of columns.value)if(field.type==='ref')await loadOptions(field);
 }
-async function navigate(key){if(busy.value)return;section.value=key;page.value=1;query.value='';state.value='';selected.value=null;await guarded(refresh);}
+async function navigate(key){if(busy.value)return;section.value=key;page.value=1;query.value='';state.value='';selected.value=null;previewResult.value=null;await guarded(refresh);}
+async function previewInvoice(){await guarded(async()=>{if(!previewSubscription.value||!previewStart.value||!previewEnd.value)throw new Error('请选择订阅与完整账期');previewResult.value=await request('/subscriptions/'+previewSubscription.value+'/bill-preview?'+new URLSearchParams({periodStart:previewStart.value,periodEnd:previewEnd.value}));});}
 async function switchMode(next){if(busy.value)return;mode.value=next;window.history.replaceState({},'',next==='admin'?'/admin':'/work');await navigate(next==='admin'?'users':'dashboard');}
 async function openDetail(row){await guarded(async()=>{selected.value=await request('/records/'+row.id);history.value=await request('/records/'+row.id+'/history');attachments.value=await request('/attachments/'+row.id);});}
 async function loadOptions(field,q=''){
@@ -83,6 +86,7 @@ onMounted(async()=>{if(token.value)await guarded(load);});
    <div class="space-label">{{mode==='work'?'业务工作台':'系统管理'}}</div>
    <nav v-if="mode==='work'" aria-label="业务模块"><button :disabled="busy" :class="{active:section==='dashboard'}" @click="navigate('dashboard')"><span class="nav-icon">▦</span>业务概览</button><button v-for="(m,index) in catalog?.modules" :key="m.key" :disabled="busy" :class="{active:section===m.key}" @click="navigate(m.key)"><span class="nav-index">{{String(index+1).padStart(2,'0')}}</span>{{m.label}}</button></nav>
    <nav v-else aria-label="系统管理"><button :disabled="busy" :class="{active:section==='users'}" @click="navigate('users')">账号与权限</button><button :disabled="busy" :class="{active:section==='audit'}" @click="navigate('audit')">操作审计</button></nav>
+   <nav v-if="mode==='work'" aria-label="计费工具"><button :disabled="busy" :class="{active:section==='billing-preview'}" @click="navigate('billing-preview')"><span class="nav-icon">∑</span>账单试算</button></nav>
    <div class="sidebar-bottom"><div class="workspace-tag"><span class="dot"></span>独立企业工作空间</div><p>知华科技社区源码版</p><a href="https://www.zhuatech.cn/" target="_blank" rel="noopener">深度定制与商业授权 ↗</a></div>
   </aside>
   <div class="main-shell">
@@ -95,6 +99,18 @@ onMounted(async()=>{if(token.value)await guarded(load);});
      <div class="dashboard-grid"><section class="panel"><div class="panel-heading"><h2>业务处理概况</h2><span class="muted">点击模块进入业务列表</span></div><button v-for="item in dashboard.modules" :key="item.key" class="module-row" :disabled="busy" @click="navigate(item.key)"><div><strong>{{item.label}}</strong><span>{{item.states.map(s=>format(s.state)+' '+s.total).join(' · ')||'暂无业务记录'}}</span></div><b>{{item.count}}<small>条记录 →</small></b></button></section><section class="panel"><div class="panel-heading"><h2>最近操作</h2><span class="muted">审计留痕</span></div><div class="activity" v-for="(item,i) in dashboard.recent.slice(0,7)" :key="i"><span class="activity-dot"></span><div><strong>{{item.actor}} <span>{{item.action}}</span></strong><p>{{item.remark}}</p><time>{{prettyTime(item.created_at)}}</time></div></div><p v-if="!dashboard.recent.length" class="empty">暂无操作记录</p></section></div>
      <div class="info-band"><strong>操作提示</strong><span>先维护基础资料，再发起业务单据。审批必须由另一位审核人员完成；自动流水仅供查阅，不能手动改写。</span></div>
     </template>
+    <section v-else-if="section==='billing-preview'" class="panel billing-panel">
+     <div class="panel-heading"><h2>出账前核对</h2><span class="muted">只读试算 · 不生成账单</span></div>
+     <form class="billing-form" @submit.prevent="previewInvoice">
+      <label>生效订阅<select v-model="previewSubscription" required @change="previewResult=null"><option value="">请选择订阅</option><option v-for="row in previewSubscriptions" :key="row.id" :value="row.id">{{row.code}} · {{row.data.customer}}</option></select></label>
+      <label>账期开始<input v-model="previewStart" type="date" required @change="previewResult=null"></label>
+      <label>账期结束<input v-model="previewEnd" type="date" required @change="previewResult=null"></label>
+      <button class="primary" :disabled="busy||!previewSubscriptions.length">{{busy?'计算中…':'计算预计费用'}}</button>
+     </form>
+     <div v-if="previewResult" class="billing-result"><div class="billing-amount"><span>预计应收</span><strong>¥ {{previewResult.amount}}</strong></div><dl class="data-grid"><dt>基础费</dt><dd>¥ {{previewResult.baseFee}}</dd><dt>已使用单位</dt><dd>{{previewResult.usedUnits}}</dd><dt>包含单位</dt><dd>{{previewResult.includedUnits}}</dd><dt>超额单位</dt><dd>{{previewResult.overageUnits}}</dd><dt>账期</dt><dd>{{previewResult.periodStart}} 至 {{previewResult.periodEnd}}</dd></dl></div>
+     <p v-else-if="!previewSubscriptions.length" class="empty">暂无生效订阅，请先创建并开通订阅。</p>
+     <p class="table-note">基础费按套餐月价和席位数计算，不按账期天数折算；正式出账请到订阅记录执行“生成账单”。</p>
+    </section>
     <section v-else-if="module" class="panel">
      <form class="toolbar" @submit.prevent="page=1;guarded(refresh)"><input v-model="query" aria-label="搜索业务记录" placeholder="搜索编号、名称或业务内容"><select v-model="state" aria-label="状态筛选" @change="page=1;guarded(refresh)"><option value="">全部状态</option><option v-for="s in states" :key="s" :value="s">{{format(s)}}</option></select><button :disabled="busy">查询</button><button type="button" class="push-right" @click="exportCsv">导出 CSV</button></form>
      <div class="table-scroll"><table><thead><tr><th>业务编号</th><th v-for="f in columns" :key="f.key">{{f.label}}</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody><tr v-for="row in rows" :key="row.id"><td><button class="record-link" :disabled="busy" @click="openDetail(row)">{{row.code}}</button><small class="record-version">版本 {{row.version}}</small></td><td v-for="f in columns" :key="f.key">{{display(row,f)}}</td><td><span class="status" :data-state="row.state">{{format(row.state)}}</span></td><td class="muted nowrap">{{prettyTime(row.updatedAt)}}</td><td><button class="text-button" :disabled="busy" @click="openDetail(row)">查看</button></td></tr></tbody></table><div v-if="!rows.length" class="empty"><strong>暂无符合条件的记录</strong><p>{{module.creatable?'请调整搜索条件，或新建一条业务记录。':'业务完成后，系统会自动生成可追溯流水。'}}</p></div></div>

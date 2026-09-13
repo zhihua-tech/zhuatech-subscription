@@ -28,6 +28,9 @@ public class Api {
  @GetMapping("/dashboard") Object dashboard(@RequestHeader(value="Authorization",required=false) String h){return e.dashboard(user(h));}
  @GetMapping("/records") Page records(@RequestHeader(value="Authorization",required=false) String h,@RequestParam String module,@RequestParam(defaultValue="") String q,@RequestParam(defaultValue="") String state,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="20") int size){return e.page(user(h),module,q,state,page,size);}
  @GetMapping("/records/{id}") Row record(@RequestHeader(value="Authorization",required=false) String h,@PathVariable String id){return e.get(user(h),id);}
+ @GetMapping("/subscriptions/{id}/bill-preview") Object billPreview(@RequestHeader(value="Authorization",required=false) String h,@PathVariable String id,@RequestParam String periodStart,@RequestParam String periodEnd){
+  User u=user(h);return e.previewBill(u,id,Engine.date(Map.of("periodStart",periodStart),"periodStart"),Engine.date(Map.of("periodEnd",periodEnd),"periodEnd"));
+ }
  @PostMapping("/records/{module}") Object create(@RequestHeader(value="Authorization",required=false) String h,@RequestHeader(value="Idempotency-Key",required=false) String key,@PathVariable String module,@RequestBody Command c){
   if(c.code()==null)throw new Failure(400,"缺少编号");return e.create(user(h),module,c.code(),data(c),key);
  }
