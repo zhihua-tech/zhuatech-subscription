@@ -120,21 +120,30 @@
     "action": "pay",
     "role": "reviewer",
     "data": {
-      "paymentRef": "PAY-2026-001"
+      "paymentRef": "PAY-2026-001",
+      "amount": 20
     }
   },
+  {"op":"check","target":"invoice","expect":{"state":"PARTIALLY_PAID","data.paidAmount":20,"data.remainingAmount":45}},
+  {"op":"metric","expect":{"待收账单":1,"待收金额":45}},
+  {"op":"action","target":"invoice","action":"pay","role":"reviewer","data":{"paymentRef":"PAY-2026-001","amount":10},"error":409},
+  {"op":"action","target":"invoice","action":"pay","role":"reviewer","data":{"paymentRef":"PAY-2026-OVER","amount":50},"error":409},
+  {"op":"action","target":"invoice","action":"pay","role":"reviewer","data":{"paymentRef":"PAY-2026-DEC","amount":1.001},"error":409},
+  {"op":"action","target":"invoice","action":"pay","role":"reviewer","data":{"paymentRef":"PAY-2026-002","amount":45}},
   {
     "op": "check",
     "target": "invoice",
     "expect": {
       "state": "PAID",
-      "data.paymentRef": "PAY-2026-001"
+      "data.paymentRef": "PAY-2026-002",
+      "data.paidAmount": 65,
+      "data.remainingAmount": 0
     }
   },
   {
     "op": "count",
     "module": "payments",
-    "count": 1
+    "count": 2
   },
   {
     "op": "action",

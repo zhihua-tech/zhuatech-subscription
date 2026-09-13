@@ -321,7 +321,8 @@
           "key": "pay",
           "label": "登记收款",
           "from": [
-            "ISSUED"
+            "ISSUED",
+            "PARTIALLY_PAID"
           ],
           "to": "PAID",
           "role": "REVIEWER",
@@ -336,7 +337,8 @@
               "options": [],
               "min": null,
               "max": null
-            }
+            },
+            {"key":"amount","label":"本次到账金额","type":"money","required":true,"ref":null,"options":[],"min":"0.01","max":"999999999999"}
           ]
         }
       ]
@@ -363,6 +365,16 @@
           "key": "paymentRef",
           "label": "收款流水号",
           "type": "text",
+          "required": true,
+          "ref": null,
+          "options": [],
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "amount",
+          "label": "本次到账金额",
+          "type": "money",
           "required": true,
           "ref": null,
           "options": [],

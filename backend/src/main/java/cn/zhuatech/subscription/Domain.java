@@ -35,7 +35,7 @@ import static cn.zhuatech.subscription.Engine.*;
   long included=num(plan.data(),"includedUnits").longValueExact()*seats;long overage=Math.max(0,used-included);
   BigDecimal fee=num(plan.data(),"monthlyFee").multiply(BigDecimal.valueOf(seats));
   BigDecimal amount=money(fee.add(num(plan.data(),"overagePrice").multiply(BigDecimal.valueOf(overage))));
-  Map<String,Object> invoice=new LinkedHashMap<>();invoice.put("subscription",r.id());invoice.put("periodStart",start.toString());invoice.put("periodEnd",end.toString());invoice.put("usedUnits",used);invoice.put("includedUnits",included);invoice.put("overageUnits",overage);invoice.put("baseFee",money(fee));invoice.put("amount",amount);invoice.put("customer",txt(d,"customer"));
+  Map<String,Object> invoice=new LinkedHashMap<>();invoice.put("subscription",r.id());invoice.put("periodStart",start.toString());invoice.put("periodEnd",end.toString());invoice.put("usedUnits",used);invoice.put("includedUnits",included);invoice.put("overageUnits",overage);invoice.put("baseFee",money(fee));invoice.put("amount",amount);invoice.put("paidAmount",BigDecimal.ZERO.setScale(2));invoice.put("remainingAmount",amount);invoice.put("customer",txt(d,"customer"));
   return invoice;
  }
  public String action(Engine e,User u,Row r,String action,Map<String,Object>i,Map<String,Object>d){
@@ -50,11 +50,16 @@ import static cn.zhuatech.subscription.Engine.*;
    }
    case "invoices.pay" -> {
     require(e.all(u,"payments").stream().noneMatch(x->text(x,"paymentRef").equalsIgnoreCase(txt(i,"paymentRef"))),"收款流水号重复");
-    e.ledger(u,"payments","POSTED",Map.of("invoice",r.id(),"paymentRef",txt(i,"paymentRef"),"amount",r.data().get("amount"),"receivedBy",u.username()));
+    BigDecimal amount=num(i,"amount"),total=num(d,"amount"),paid=d.containsKey("paidAmount")?num(d,"paidAmount"):BigDecimal.ZERO;
+    require(amount.signum()>0&&amount.stripTrailingZeros().scale()<=2,"收款金额须大于零且最多两位小数");
+    require(paid.add(amount).compareTo(total)<=0,"本次收款超过账单未收金额");
+    e.ledger(u,"payments","POSTED",Map.of("invoice",r.id(),"paymentRef",txt(i,"paymentRef"),"amount",money(amount),"receivedBy",u.username(),"receivedAt",Instant.now().toString()));
+    BigDecimal next=money(paid.add(amount));d.put("paidAmount",next);d.put("remainingAmount",money(total.subtract(next)));d.put("lastPaymentRef",txt(i,"paymentRef"));d.put("lastPaymentAt",Instant.now().toString());
+    if(next.compareTo(total)<0)return "PARTIALLY_PAID";
     d.put("paymentRef",txt(i,"paymentRef"));d.put("paidAt",Instant.now().toString());
    }
   }
   return null;
  }
- public Map<String,Object> metrics(Engine e,User u){BigDecimal due=e.all(u,"invoices").stream().filter(r->r.state().equals("ISSUED")).map(r->num(r.data(),"amount")).reduce(BigDecimal.ZERO,BigDecimal::add);return Map.of("有效订阅",e.all(u,"subscriptions").stream().filter(r->r.state().equals("ACTIVE")).count(),"待收账单",e.all(u,"invoices").stream().filter(r->r.state().equals("ISSUED")).count(),"待收金额",money(due));}
+ public Map<String,Object> metrics(Engine e,User u){var open=e.all(u,"invoices").stream().filter(r->Set.of("ISSUED","PARTIALLY_PAID").contains(r.state())).toList();BigDecimal due=open.stream().map(r->num(r.data(),"amount").subtract(r.data().containsKey("paidAmount")?num(r.data(),"paidAmount"):BigDecimal.ZERO)).reduce(BigDecimal.ZERO,BigDecimal::add);return Map.of("有效订阅",e.all(u,"subscriptions").stream().filter(r->r.state().equals("ACTIVE")).count(),"待收账单",open.size(),"待收金额",money(due));}
 }
