@@ -6,9 +6,21 @@ import java.math.*;
 import java.time.*;
 import static cn.zhuatech.subscription.Model.*;
 import static cn.zhuatech.subscription.Engine.*;
+/**
+ * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+ */
 @Component public class Domain {
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  static String text(Row r,String k){return txt(r.data(),k);}
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  static List<Row> linked(Engine e,User u,String module,String field,String id){return e.all(u,module).stream().filter(x->text(x,field).equals(id)).toList();}
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  public void create(Engine e,User u,String module,Map<String,Object>d){
   switch(module){
    case "plans" -> require(e.all(u,module).stream().noneMatch(x->text(x,"planCode").equalsIgnoreCase(txt(d,"planCode"))),"套餐编码重复");
@@ -21,9 +33,15 @@ import static cn.zhuatech.subscription.Engine.*;
    }
   }
  }
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  public void edit(Engine e,User u,Row r,Map<String,Object>d){
   if(r.module().equals("plans")){require(linked(e,u,"subscriptions","plan",r.id()).isEmpty(),"套餐已有订阅，不能改写历史价格");require(e.all(u,"plans").stream().noneMatch(x->!x.id().equals(r.id())&&text(x,"planCode").equalsIgnoreCase(txt(d,"planCode"))),"套餐编码重复");}
  }
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  public Map<String,Object> previewBill(Engine e,User u,Row r,LocalDate start,LocalDate end){
   require(r.module().equals("subscriptions"),"仅订阅支持账单试算");
   require(r.state().equals("ACTIVE"),"仅生效中的订阅可试算账单");
@@ -38,6 +56,9 @@ import static cn.zhuatech.subscription.Engine.*;
   Map<String,Object> invoice=new LinkedHashMap<>();invoice.put("subscription",r.id());invoice.put("periodStart",start.toString());invoice.put("periodEnd",end.toString());invoice.put("usedUnits",used);invoice.put("includedUnits",included);invoice.put("overageUnits",overage);invoice.put("baseFee",money(fee));invoice.put("amount",amount);invoice.put("paidAmount",BigDecimal.ZERO.setScale(2));invoice.put("remainingAmount",amount);invoice.put("customer",txt(d,"customer"));
   return invoice;
  }
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  public String action(Engine e,User u,Row r,String action,Map<String,Object>i,Map<String,Object>d){
   switch(r.module()+"."+action){
    case "subscriptions.activate" -> {e.ref(u,d,"plan","plans");require(!date(d,"startsAt").isAfter(LocalDate.now()),"起始日期尚未到达");d.put("activatedAt",Instant.now().toString());}
@@ -61,5 +82,8 @@ import static cn.zhuatech.subscription.Engine.*;
   }
   return null;
  }
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  public Map<String,Object> metrics(Engine e,User u){var open=e.all(u,"invoices").stream().filter(r->Set.of("ISSUED","PARTIALLY_PAID").contains(r.state())).toList();BigDecimal due=open.stream().map(r->num(r.data(),"amount").subtract(r.data().containsKey("paidAmount")?num(r.data(),"paidAmount"):BigDecimal.ZERO)).reduce(BigDecimal.ZERO,BigDecimal::add);return Map.of("有效订阅",e.all(u,"subscriptions").stream().filter(r->r.state().equals("ACTIVE")).count(),"待收账单",open.size(),"待收金额",money(due));}
 }
