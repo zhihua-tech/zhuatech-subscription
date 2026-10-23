@@ -1,0 +1,47 @@
+[
+  {
+    "patch": {},
+    "expected": {
+      "decision": "REVIEW",
+      "oldUnusedValue": "#150",
+      "newRemainingValue": "#250",
+      "additionalCharge": "#100"
+    },
+    "error": false
+  },
+  {
+    "patch": {
+      "newPeriodFee": "100"
+    },
+    "expected": {
+      "candidateCredit": "#100",
+      "additionalCharge": "#0"
+    },
+    "error": false
+  },
+  {
+    "patch": {
+      "remainingDays": "0"
+    },
+    "expected": {
+      "additionalCharge": "#0"
+    },
+    "error": false
+  },
+  {
+    "patch": {
+      "remainingDays": "31"
+    },
+    "expected": {},
+    "error": true
+  },
+  {
+    "patch": {
+      "changeApproved": "NO"
+    },
+    "expected": {
+      "decision": "HOLD"
+    },
+    "error": false
+  }
+]
