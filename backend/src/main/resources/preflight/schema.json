@@ -1,0 +1,95 @@
+{
+  "slug": "subscription",
+  "title": "订阅席位与有效期重叠预检",
+  "fields": [
+    {
+      "key": "subscription_no",
+      "label": "订阅编号",
+      "type": "ID",
+      "length": 200
+    },
+    {
+      "key": "customer",
+      "label": "客户",
+      "type": "ID",
+      "length": 200
+    },
+    {
+      "key": "seats",
+      "label": "购买席位",
+      "type": "INTEGER",
+      "length": 200,
+      "scale": 0,
+      "min": "1"
+    },
+    {
+      "key": "assigned",
+      "label": "已分配席位",
+      "type": "INTEGER",
+      "length": 200,
+      "scale": 0
+    },
+    {
+      "key": "start_date",
+      "label": "开始日期",
+      "type": "DATE",
+      "length": 200
+    },
+    {
+      "key": "end_date",
+      "label": "结束日期",
+      "type": "DATE",
+      "length": 200
+    }
+  ],
+  "unique": [
+    [
+      "subscription_no"
+    ]
+  ],
+  "rules": [
+    {
+      "op": "LE",
+      "args": [
+        "assigned",
+        "seats"
+      ],
+      "code": "SEAT_OVERASSIGNED",
+      "message": "分配席位不能超过购买席位",
+      "bad": {
+        "assigned": "101"
+      }
+    },
+    {
+      "op": "DATE_LE",
+      "args": [
+        "start_date",
+        "end_date"
+      ],
+      "code": "SUB_DATE",
+      "message": "结束日期不得早于开始日期",
+      "bad": {
+        "end_date": "2026-01-01"
+      }
+    },
+    {
+      "op": "NO_OVERLAP",
+      "args": [
+        "customer",
+        "start_date",
+        "end_date"
+      ],
+      "code": "SUB_OVERLAP",
+      "message": "同客户本批订阅期间不能重叠",
+      "bad": null
+    }
+  ],
+  "sampleCsv": "subscription_no,customer,seats,assigned,start_date,end_date\nSUB-001,CUS-01,100,80,2026-11-01,2027-10-31\n",
+  "limits": {
+    "rows": 500,
+    "bytes": 262144,
+    "columns": 32,
+    "cellCharacters": 4000
+  },
+  "scope": "Read-only batch validation; no persistence, reference-master lookup or full production certification."
+}
